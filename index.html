@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5.30.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.20.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0"></script>
+</head>
+<body>
+  <div id="vis0"></div>
+  <div id="vis1"></div>
+
+  <script>
+    const spec0 = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "title": {"text": "Top YouTube Channels by Subscriber Count", "fontSize": 20},
+      "width": 800,
+      "height": 600,
+      "description": "A bar chart showing the top YouTube channels with a filter to control how many channels are displayed.",
+      "data": {
+        "url": "https://raw.githubusercontent.com/Abdeali-007/FIT3179-WK10-HW/main/Global%20YouTube%20Statistics.csv"
+      },
+      "transform": [
+        {"filter": "datum.rank <= slider_rank"},
+        {
+          "calculate": "datum.Country == 'nan' ? 'Unknown' : datum.Country",
+          "as": "Country_fixed"
+        },
+        {
+          "calculate": "datum['video views'] < 1000 ? 'N/A' : format(datum['video views'], ',d')",
+          "as": "views_fixed"
+        },
+        {
+          "calculate": "datum.uploads < 10 ? 'N/A' : format(datum.uploads, ',d')",
+          "as": "uploads_fixed"
+        }
+      ],
+      "params": [
+        {
+          "name": "slider_rank",
+          "value": 15,
+          "bind": {
+            "input": "range",
+            "min": 1,
+            "max": 50,
+            "step": 1,
+            "name": "Number of Top Channels "
+          }
+        }
+      ],
+      "layer": [
+        {
+          "mark": "bar",
+          "encoding": {
+            "x": {
+              "field": "Youtuber",
+              "type": "nominal",
+              "title": "YouTube Channel",
+              "sort": {"field": "rank", "order": "ascending"},
+              "axis": {"labelAngle": -45}
+            },
+            "y": {
+              "field": "subscribers",
+              "type": "quantitative",
+              "title": "Subscribers",
+              "axis": {"format": ",d"}
+            },
+            "color": {
+              "field": "Country_fixed",
+              "type": "nominal",
+              "title": "Country",
+              "scale": {
+                "domain": [
+                  "Argentina",
+                  "Brazil",
+                  "Canada",
+                  "Chile",
+                  "India",
+                  "Japan",
+                  "Russia",
+                  "South Korea",
+                  "United Kingdom",
+                  "United States",
+                  "Unknown"
+                ],
+                "range": [
+                  "#a6cee3",
+                  "#1f78b4",
+                  "#b2df8a",
+                  "#33a02c",
+                  "#fb9a99",
+                  "#e31a1c",
+                  "#fdbf6f",
+                  "#ff7f00",
+                  "#cab2d6",
+                  "#6a3d9a",
+                  "#ffff99"
+                ]
+              }
+            },
+            "tooltip": [
+              {"field": "rank", "type": "nominal", "title": "Rank"},
+              {"field": "Youtuber", "type": "nominal", "title": "Channel"},
+              {
+                "field": "subscribers",
+                "type": "quantitative",
+                "title": "Subscribers",
+                "format": ",d"
+              },
+              {"field": "Country_fixed", "type": "nominal", "title": "Country"},
+              {"field": "views_fixed", "type": "nominal", "title": "Video Views"},
+              {"field": "uploads_fixed", "type": "nominal", "title": "Uploads"}
+            ]
+          }
+        },
+        {
+          "mark": {
+            "type": "text",
+            "align": "center",
+            "baseline": "bottom",
+            "dy": -5
+          },
+          "encoding": {
+            "x": {
+              "field": "Youtuber",
+              "type": "nominal",
+              "sort": {"field": "rank", "order": "ascending"}
+            },
+            "y": {"field": "subscribers", "type": "quantitative"},
+            "text": {"field": "rank", "type": "nominal"}
+          }
+        }
+      ],
+      "config": {}
+    };
+
+    const spec1 = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "width": 800,
+      "height": 450,
+      "title": "Mapping YouTube's Global Stars",
+      "projection": {"type": "equalEarth"},
+      "layer": [
+        {
+          "data": {"graticule": {"step": [30, 30]}},
+          "mark": {"type": "geoshape", "stroke": "lightgray", "strokeWidth": 0.5}
+        },
+        {
+          "data": {
+            "url": "https://raw.githubusercontent.com/Abdeali-007/FIT3179-W9-HW/main/ne_110m.json",
+            "format": {"type": "topojson", "feature": "ne_110m_admin_0_countries"}
+          },
+          "mark": {
+            "type": "geoshape",
+            "fill": "lightgray",
+            "stroke": "white",
+            "strokeWidth": 0.5
+          }
+        },
+        {
+          "data": {
+            "url": "https://raw.githubusercontent.com/Abdeali-007/FIT3179-W9-HW/main/Global%20YouTube%20Statistics.csv",
+            "format": {"type": "csv"}
+          },
+          "transform": [
+            {
+              "filter": "datum.subscribers != null && datum.Country != null && datum.Latitude != null && datum.Longitude != null && !isNaN(datum.Latitude) && !isNaN(datum.Longitude) && datum.Country != 'nan' && datum.Latitude != 'nan' && datum.Longitude != 'nan'"
+            },
+            {
+              "aggregate": [
+                {"op": "sum", "field": "subscribers", "as": "total_subscribers"},
+                {"op": "count", "field": "Youtuber", "as": "channels"}
+              ],
+              "groupby": ["Country", "Latitude", "Longitude"]
+            }
+          ],
+          "mark": {
+            "type": "circle",
+            "opacity": 0.7,
+            "stroke": "black",
+            "strokeWidth": 1
+          },
+          "encoding": {
+            "longitude": {"field": "Longitude", "type": "quantitative"},
+            "latitude": {"field": "Latitude", "type": "quantitative"},
+            "size": {
+              "field": "total_subscribers",
+              "type": "quantitative",
+              "scale": {"range": [10, 2000]},
+              "legend": {"title": "Total Subscribers", "format": ".1s"}
+            },
+            "color": {
+              "field": "channels",
+              "type": "quantitative",
+              "scale": {"scheme": "blues"},
+              "legend": {
+                "title": "Number of Top YouTube Channels (total of 955)",
+                "labelLimit": 300,
+                "titleLimit": 300
+              }
+            },
+            "tooltip": [
+              {"field": "Country", "title": "Country"},
+              {"field": "channels", "title": "Top YouTube Channels"},
+              {
+                "field": "total_subscribers",
+                "title": "Total Subscribers",
+                "format": ".2s"
+              }
+            ]
+          }
+        }
+      ],
+      "config": {"view": {"stroke": "transparent"}}
+    };
+
+    vegaEmbed("#vis0", spec0, {mode: "vega-lite"}).then(console.log).catch(console.warn);
+    vegaEmbed("#vis1", spec1, {mode: "vega-lite"}).then(console.log).catch(console.warn);
+  </script>
+</body>
+</html>
